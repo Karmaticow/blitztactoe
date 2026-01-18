@@ -4,6 +4,8 @@ import json
 import asyncio
 import time
 
+from game.views import game
+
 TURN_TIME = 5
 GAMES = {}
 
@@ -32,11 +34,7 @@ async def turn_timeout_task(room_id):
     }
 
     channel_layer = get_channel_layer()
-    for channel_name in game.get("channels", []):
-        try:
-            await channel_layer.send(channel_name, message)
-        except Exception:
-            pass
+    await channel_layer.group_send(f"room_{room_id}", message)
 
 
 class GameConsumer(AsyncWebsocketConsumer):
