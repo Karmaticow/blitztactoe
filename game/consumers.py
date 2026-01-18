@@ -4,8 +4,6 @@ import json
 import asyncio
 import time
 
-from game.views import game
-
 TURN_TIME = 5
 GAMES = {}
 
