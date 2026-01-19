@@ -192,6 +192,28 @@ class GameConsumer(AsyncWebsocketConsumer):
                 "winner": "draw",
                 "board": game["board"],
             })
+
+            await asyncio.sleep(0.1)
+
+            game = GAMES.get(self.room_id)
+            if not game or len(game["players"]) < 2:
+                return
+            
+            game["board"] = [""] * 9
+            game["turn"] = "O" if game.get("last_starter") == "X" else "X"
+            game["last_starter"] = game["turn"]
+            game["winner"] = None
+            game["rematch_votes"] = set()
+            self._start_new_turn(game)
+
+            await self._broadcast({
+                "type": "game_reset",
+                "board": game["board"],
+                "turn": game["turn"],
+                "turn_started": game["turn_started"],
+                "turn_time": TURN_TIME,
+            })
+
         else:
             game["turn"] = "O" if game["turn"] == "X" else "X"
             self._start_new_turn(game)

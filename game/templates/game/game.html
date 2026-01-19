@@ -435,13 +435,7 @@
 
                 setStatus("it's a draw! again!!!");
                 statusEl.className = "draw";
-
                 boardEl.classList.add('slide-off');
-                setTimeout(() => {
-
-                  socket.send(JSON.stringify({action: "rematch"}));
-                }, 500);
-
                 return;
 
               } else if (data.winner === mySymbol) {
