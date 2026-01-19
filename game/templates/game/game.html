@@ -35,14 +35,14 @@
             opacity: 1;
           }
           100% {
-            transform: translateX(-120vw) rotate(-30deg);
+            transform: translateX(-120vw) rotate(-20deg);
             opacity: 0;
           }
         }
 
         @keyframes slideInRight {
           0% {
-            transform: translateX(120vw) rotate(30deg);
+            transform: translateX(120vw) rotate(20deg);
             opacity: 0;
           }
           100% {
@@ -64,11 +64,11 @@
         }
 
         .board.slide-off {
-          animation: slideOffLeft 0.15s ease forwards;
+          animation: slideOffLeft 0.4s ease forwards;
         }
 
         .board.slide-in {
-          animation: slideInRight 0.15s ease;
+          animation: slideInRight 0.4s ease;
         }
 
         @keyframes pop {
@@ -440,7 +440,7 @@
                 setTimeout(() => {
 
                   socket.send(JSON.stringify({action: "rematch"}));
-                }, 150);
+                }, 500);
 
                 return;
 
@@ -484,7 +484,7 @@
             boardEl.classList.add('slide-in');
             setTimeout(() => {
               boardEl.classList.remove('slide-in');
-            }, 150);
+            }, 400);
           }
 
             document.querySelector('.container').classList.remove('shake');
@@ -548,9 +548,9 @@
 
             function updateTimer() {
                 const elapsed = (Date.now() - startedAt) / 1000;
-                const remaining = Math.max(0, turnTime - elapsed);
-                timerEl.textContent = remaining.toFixed(1);
-                timerEl.dataset.remaining = Math.ceil(remaining);
+                const remaining = Math.max(0, Math.ceil(turnTime - elapsed));
+                timerEl.textContent = remaining;
+                timerEl.dataset.remaining = remaining;
 
                 if (remaining <= 0) {
                     stopCountdown();

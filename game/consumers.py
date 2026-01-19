@@ -4,7 +4,7 @@ import json
 import asyncio
 import time
 
-TURN_TIME = 0.5
+TURN_TIME = 5
 GAMES = {}
 
 
@@ -147,11 +147,10 @@ class GameConsumer(AsyncWebsocketConsumer):
                     "turn_time": TURN_TIME,
                 })
             else:
-                if game.get("winner") != "draw":
-                    await self._broadcast({
-                        "type": "rematch_requested",
-                        "symbol": self.symbol
-                    })
+                await self._broadcast({
+                    "type": "rematch_requested",
+                    "symbol": self.symbol
+                })
             return
 
         index = data.get("index")
