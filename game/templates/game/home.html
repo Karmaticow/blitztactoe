@@ -213,6 +213,10 @@
             roomCodeEl.textContent = currentRoomCode;
             createdRoomEl.classList.remove("hidden");
             document.getElementById("create-btn").disabled = true;
+
+            document.getElementById("join-code-btn").disabled = true;
+            document.getElementById("code-input").disabled = true;
+            fetchRooms();
             
             connectToRoom(currentRoomCode, isPrivate);
         }
@@ -226,6 +230,12 @@
             createdRoomEl.classList.add("hidden");
             document.getElementById("room-options").classList.remove("hidden");
             document.getElementById("create-btn").disabled = false;
+
+            document.getElementById("join-code-btn").disabled = false;
+            document.getElementById("code-input").disabled = false;
+
+            fetchRooms();
+
         }
 
         function connectToRoom(roomCode, isPrivate = false) {
@@ -290,11 +300,13 @@
                 return;
             }
             
+            const disableJoin = currentRoomCode !== null;
+
             roomListEl.innerHTML = rooms.map(room => `
                 <li class="room-item">
                     <span class="room-code">${room.code}</span>
                     <span>${room.players}/2 players</span>
-                    <button onclick="joinRoom('${room.code}')">Join</button>
+                    <button onclick="joinRoom('${room.code}')" ${disableJoin ? 'disabled' : ''}>Join</button>
                 </li>
             `).join("");
         }

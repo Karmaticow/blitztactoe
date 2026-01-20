@@ -238,6 +238,22 @@
           animation: buttonPulse 2s ease infinite;
         }
 
+        #back-btn {
+            margin-top: 30px;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            border: 1px solid #444;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #back-btn:hover {
+            border-color: #666;
+            color: #fff;
+        }
+
         @keyframes confetti-fall {
             0% {
                 transform: translateY(0) rotate(0deg);
@@ -278,6 +294,7 @@
         <div id="game-over-actions" class="hidden">
             <button id="rematch-btn">Rematch</button>
         </div>
+        <button id="back-btn">back to lobby</button>
         <div id="toast" class="hidden"></div>
     </div>
 
@@ -299,12 +316,19 @@
         const boardEl = document.getElementById("board");
         const gameOverActions = document.getElementById("game-over-actions");
         const rematchBtn = document.getElementById("rematch-btn");
+        const backBtn = document.getElementById("back-btn");
         const toastEl = document.getElementById("toast");
 
         function init() {
             createBoard();
             connectWebSocket();
             rematchBtn.addEventListener("click", requestRematch);
+            backBtn.addEventListener("click", () => {
+                if(socket) {
+                    socket.close();
+                }
+                window.location.href = "/";
+            });
         }
 
         function createBoard() {
@@ -441,6 +465,8 @@
               } else if (data.winner === mySymbol) {
 
                 setStatus("you win!!!!");
+                if(data.forfeit)
+                    statusEl.textContent += " (opponent disconnected)";
                 statusEl.className = "win";
                 launchConfetti();
 
@@ -465,9 +491,12 @@
               });
             }
 
-            gameOverActions.classList.remove("hidden");
-            rematchBtn.disabled = false;
-            rematchBtn.textContent = "Rematch";
+            if(!data.forfeit)
+            {
+                gameOverActions.classList.remove("hidden");
+                rematchBtn.disabled = false;
+                rematchBtn.textContent = "Rematch";
+            }
             timerEl.textContent = "--";
         }
 

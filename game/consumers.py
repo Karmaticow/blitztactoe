@@ -95,26 +95,41 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         game = GAMES.get(self.room_id)
+
         if game:
-            if hasattr(self, 'symbol') and self.symbol in game["players"]:
+            leaving_symbol = getattr(self, 'symbol', None)
+            any_moves_made = any(cell != "" for cell in game.get("board", []))
+            was_game_active = game.get("game_started", False) and not game.get("winner") and any_moves_made
+
+            if(hasattr(self, 'symbol') and self.symbol in game["players"]):
                 game["players"].remove(self.symbol)
             if self.channel_name in game.get("channels", []):
                 game["channels"].remove(self.channel_name)
-
+            
             if len(game["players"]) < 2:
                 if game.get("timer_task"):
                     game["timer_task"].cancel()
                     game["timer_task"] = None
                 game["game_started"] = False
 
-                await self._broadcast({
-                    "type": "player_left",
-                    "symbol": getattr(self, 'symbol', '?')
-                })
+                if was_game_active and len(game["players"]) == 1:
+                    remaining = game["players"][0]
+                    game["winner"] = remaining
+                    
+                    await self._broadcast({
+                        "type": "game_over",
+                        "winner": remaining,
+                        "board": game["board"],
+                        "forfeit": True,
+                    })
+                else:
+                    await self._broadcast({
+                        "type": "player_left",
+                        "symbol": leaving_symbol or '?',
+                    })
 
-            if len(game["players"]) == 0:
+            if(len(game["players"]) == 0):
                 del GAMES[self.room_id]
-
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
@@ -125,7 +140,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         if data.get("action") == "rematch":
             game.setdefault("rematch_votes", set()).add(self.symbol)
-            votes_needed = 1 if game.get("winner") == "draw" else 2
+            votes_needed = 2
 
             if len(game["rematch_votes"]) >= votes_needed:
                 game["board"] = [""] * 9
