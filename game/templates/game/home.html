@@ -13,6 +13,54 @@
             background: #000;
             color: #fff;
         }
+
+        .bg-symbols {
+
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+
+        }
+
+        .bg-row {
+            display: flex;
+            white-space: nowrap;
+            position: absolute;
+            left: 0;
+            width: 200%;
+        }
+
+        .bg-row span {
+            font-size: 3rem;
+            padding: 0 40px;
+            color: #222;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        @keyframes scrollLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        @keyframes scrollRight {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(0); }
+        }
+
+        .bg-row.left {
+            animation: scrollLeft 30s linear infinite;
+
+        }
+
+        .bg-row.right {
+            animation: scrollRight 30s linear infinite;
+        }
         
         .title {
             text-align: center;
@@ -23,6 +71,7 @@
             font-size: 3rem;
             margin: 0;
             font-weight: 200;
+            text-shadow: white 0 0 10px;
             letter-spacing: 8px;
             text-transform: uppercase;
         }
@@ -131,6 +180,7 @@
     </style>
 </head>
 <body>
+    <div class="bg-symbols" id="bg-symbols"></div>
     <div class="title">
         <h1>BlitzTacToe</h1>
         <p>it's like tictactoe, ok? difference is its like really fast, ok? so move fast ok? ok???</p>
@@ -329,6 +379,27 @@
     .then(data => {
         document.getElementById("view-count").textContent = `views: ${data.views}`;
     });
+
+    const container = document.getElementById('bg-symbols');
+    const count = 20;
+    const rows = 8;
+
+    for(let i = 0; i < rows; i++) {
+
+        const row = document.createElement('div');
+        row.className = `bg-row ${i % 2 == 0 ? 'left' : 'right'}`;
+
+        row.style.top = `${(i / rows) * 100}%`;
+
+        let symbols = "";
+        for(let j = 0; j < count; j++) {
+            symbols += `<span>${j % 2 == 0 ? 'X' : 'O'}</span>`;
+        }
+
+        row.innerHTML = symbols + symbols;
+        container.appendChild(row);
+
+    }
 
     </script>
 
