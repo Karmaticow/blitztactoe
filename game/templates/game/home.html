@@ -12,6 +12,10 @@
             padding: 20px;
             background: #000;
             color: #fff;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .bg-symbols {
@@ -86,7 +90,7 @@
             justify-content: center;
             gap: 40px;
             flex-wrap: wrap;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
         }
         
@@ -126,7 +130,38 @@
             color: #666;
             cursor: not-allowed;
         }
-        
+
+        .room-toggle {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #333;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .room-toggle:hover {
+            background-color: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .room-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .room-toggle.private {
+            background-color: #666;
+            color: #fff;
+            color: #45b6fe;
+        }
+
         .room-list {
             list-style: none;
             padding: 0;
@@ -141,11 +176,19 @@
             border: 1px solid #333;
             margin: 5px 0;
             background: #111;
+            gap: 10px;
         }
         
         .room-code {
             font-family: monospace;
             font-size: 1.2rem;
+        }
+
+        .room-name {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #fff;
+            flex-grow: 1;
         }
         
         .no-rooms {
@@ -154,8 +197,8 @@
         }
         
         .created-room {
-            margin-top: 15px;
-            padding: 15px;
+            margin-top: 10px;
+            padding: 10px;
             border: 1px solid #333;
             background: #111;
         }
@@ -175,11 +218,109 @@
             font-family: monospace;
             font-size: 2rem;
             letter-spacing: 3px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .created-room .code:hover {
+            background-color: #222;
+            color: #45b6fe;
+        }
+
+        .created-room .code:active {
+            transform: scale(0.95);
+        }
+
+        #waiting-text {
             animation: pulse 2s infinite;
         }
 
+        #code-input {
+            padding: 10px 15px;
+            font-size: 1rem;
+            font-family: monospace;
+            text-transform: uppercase;
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #333;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            cursor: text;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        #code-input:hover {
+            background-color: #f5f5f5;
+        }
+
+        #code-input:focus {
+            outline: none;
+            background-color: #fff;
+            border-color: #45b6fe;
+            box-shadow: 0 0 10px rgba(69, 182, 254, 0.3);
+        }
+
+        #code-input::placeholder {
+            color: #999;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border: 1px solid #333;
+            background: #111;
+            color: #fff;
+            border-radius: 5px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 300px;
+        }
+
+        .notification.error {
+            border-color: #ff6b6b;
+            background: #1a0a0a;
+            color: #ff6b6b;
+        }
+
+        .notification.success {
+            border-color: #45b6fe;
+            background: #0a1a2a;
+            color: #45b6fe;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .notification.hide {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+
     </style>
-</head>
 <body>
     <div class="bg-symbols" id="bg-symbols"></div>
     <div class="title">
@@ -193,23 +334,19 @@
             <p>start a new game and invite someone to play!!!</p>
             <button id="create-btn">create room</button>
 
-            <div id = "room-options" style = "margin-top: 15px;">
-                <label>
-                    <input type="radio" name="room-type" value="public" checked> public
-                </label>
+            <div style="margin-top: 20px;">
+                <input type="text" id="room-name-input" placeholder="room name (optional)" maxlength="20" style="padding: 10px 14px; font-size: 0.95rem; background-color: #fff; color: #000; border: 1px solid #555; border-radius: 4px; width: 100%; box-sizing: border-box; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); user-select: text; -webkit-user-select: text;" onFocus="this.style.borderColor='#45b6fe'; this.style.boxShadow='0 0 8px rgba(69, 182, 254, 0.3)';" onBlur="this.style.borderColor='#555'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.2)';">
+            </div>
 
-                <br>
-
-                <label>
-                    <input type="radio" name="room-type" value="private"> private
-                </label>
+            <div style="margin-top: 20px;">
+                <button id="room-toggle" class="room-toggle" data-mode="public">public</button>
             </div>
             
             <div id="created-room" class="created-room hidden">
-                <p>your room code:</p>
+                <p id="room-name-display" style="margin: 0 0 10px 0; font-size: 1.1rem; font-weight: 500;"></p>
+                <p id="code-label">your room code:</p>
                 <div class="code" id="room-code"></div>
-                <p>waiting for opponent...</p>
-                <button id="copy-btn">copy code</button>
+                <p id="waiting-text">waiting for opponent...</p>
                 <button id="cancel-btn">cancel</button>
             </div>
         </div>
@@ -222,11 +359,12 @@
             </ul>
             <button id="refresh-btn">refresh</button>
 
-            <div style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+            <div style = "margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">
                 <p>or enter a code: </p>
-                <input type="text" id="code-input" maxlength = "6" placeholder = "code" style = "padding: 8px; text-transform: uppercase; font-family: monospace;">
+                <input type="text" id="code-input" maxlength="6" placeholder="code">
                 <button id = "join-code-btn">join room</button>
             </div>
+        </div>
     </div>
 
     <script>
@@ -238,13 +376,42 @@
         let currentRoomCode = null;
         let refreshInterval = null;
 
+        function showNotification(message, type = 'error') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('hide');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
         document.getElementById("create-btn").addEventListener("click", createRoom);
-        document.getElementById("copy-btn").addEventListener("click", copyCode);
         document.getElementById("cancel-btn").addEventListener("click", cancelRoom);
         document.getElementById("refresh-btn").addEventListener("click", fetchRooms);
         document.getElementById("join-code-btn").addEventListener("click", joinWithCode);
         document.getElementById("code-input").addEventListener("keyup", (e) => {
         if (e.key === "Enter") joinWithCode();
+        });
+
+        document.getElementById("room-code").addEventListener("click", function() {
+            const code = this.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('code copied!', 'success');
+            }).catch(() => {
+                showNotification('failed to copy code', 'error');
+            });
+        });
+
+        document.getElementById("room-toggle").addEventListener("click", function() {
+            const toggle = document.getElementById("room-toggle");
+            const currentMode = toggle.dataset.mode;
+            const newMode = currentMode === 'public' ? 'private' : 'public';
+            toggle.dataset.mode = newMode;
+            toggle.textContent = newMode;
+            toggle.classList.toggle('private');
         });
 
         function generateRoomCode() {
@@ -258,18 +425,40 @@
 
         function createRoom() {
 
-            const isPrivate = document.querySelector('input[name="room-type"]:checked').value === "private";
+            const isPrivate = document.getElementById('room-toggle').dataset.mode === 'private';
+            const roomName = document.getElementById('room-name-input').value;
 
             currentRoomCode = generateRoomCode();
             roomCodeEl.textContent = currentRoomCode;
+            
+            // Display room name if provided
+            const nameDisplay = document.getElementById('room-name-display');
+            if (roomName) {
+                nameDisplay.textContent = `"${roomName}"`;
+                nameDisplay.style.display = 'block';
+            } else {
+                nameDisplay.style.display = 'none';
+            }
+            
+            // Hide code for public lobbies, show for private
+            const codeLabel = document.getElementById('code-label');
+            if (isPrivate) {
+                roomCodeEl.style.display = 'block';
+                codeLabel.style.display = 'block';
+            } else {
+                roomCodeEl.style.display = 'none';
+                codeLabel.style.display = 'none';
+            }
+            
             createdRoomEl.classList.remove("hidden");
             document.getElementById("create-btn").disabled = true;
+            document.getElementById('room-name-input').disabled = true;
 
             document.getElementById("join-code-btn").disabled = true;
             document.getElementById("code-input").disabled = true;
             fetchRooms();
             
-            connectToRoom(currentRoomCode, isPrivate);
+            connectToRoom(currentRoomCode, isPrivate, roomName);
         }
 
         function cancelRoom() {
@@ -279,8 +468,8 @@
             }
             currentRoomCode = null;
             createdRoomEl.classList.add("hidden");
-            document.getElementById("room-options").classList.remove("hidden");
             document.getElementById("create-btn").disabled = false;
+            document.getElementById('room-name-input').disabled = false;
 
             document.getElementById("join-code-btn").disabled = false;
             document.getElementById("code-input").disabled = false;
@@ -289,9 +478,9 @@
 
         }
 
-        function connectToRoom(roomCode, isPrivate = false) {
+        function connectToRoom(roomCode, isPrivate = false, roomName = '') {
             const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-            const wsUrl = `${protocol}//${window.location.host}/ws/game/${roomCode}/?private=${isPrivate}`;
+            const wsUrl = `${protocol}//${window.location.host}/ws/game/${roomCode}/?private=${isPrivate}&name=${encodeURIComponent(roomName)}`;
             
             socket = new WebSocket(wsUrl);
             
@@ -320,18 +509,27 @@
             window.location.href = `/game/${roomCode}/`;
         }
 
-        function copyCode() {
-            navigator.clipboard.writeText(currentRoomCode).then(() => {
-                const btn = document.getElementById("copy-btn");
-                btn.textContent = "Copied!";
-                setTimeout(() => btn.textContent = "Copy Code", 2000);
-            });
-        }
-
         function joinWithCode() {
             const code = document.getElementById("code-input").value.trim().toUpperCase();
             if (code.length >= 4) {
-                joinRoom(code);
+                validateAndJoinRoom(code);
+            }
+        }
+
+        async function validateAndJoinRoom(code) {
+            try {
+                const response = await fetch("/api/rooms/");
+                const rooms = await response.json();
+                const roomExists = rooms.some(room => room.code === code);
+                
+                if (roomExists) {
+                    joinRoom(code);
+                } else {
+                    showNotification("room not found!", 'error');
+                    document.getElementById("code-input").value = "";
+                }
+            } catch (e) {
+                showNotification("error validating room. if issue persists, contact dev.", 'error');
             }
         }
 
@@ -341,25 +539,33 @@
                 const rooms = await response.json();
                 renderRooms(rooms);
             } catch (e) {
-                roomListEl.innerHTML = '<li class="no-rooms">Failed to load rooms</li>';
+                roomListEl.innerHTML = '<li class="no-rooms">failed to load rooms</li>';
             }
         }
 
         function renderRooms(rooms) {
             if (rooms.length === 0) {
-                roomListEl.innerHTML = '<li class="no-rooms">No active rooms. Create one!</li>';
+                roomListEl.innerHTML = '<li class="no-rooms">no active rooms. create one!</li>';
                 return;
             }
             
             const disableJoin = currentRoomCode !== null;
 
-            roomListEl.innerHTML = rooms.map(room => `
+            roomListEl.innerHTML = rooms.map(room => {
+                let displayText;
+                if (room.private) {
+                    displayText = '🔒 private';
+                } else {
+                    displayText = room.name ? `"${room.name}"` : room.code;
+                }
+                
+                return `
                 <li class="room-item">
-                    <span class="room-code">${room.code}</span>
+                    <span class="room-name">${displayText}</span>
                     <span>${room.players}/2 players</span>
-                    <button onclick="joinRoom('${room.code}')" ${disableJoin ? 'disabled' : ''}>Join</button>
+                    <button onclick="joinRoom('${room.code}')" ${disableJoin || room.private ? 'disabled' : ''}>Join</button>
                 </li>
-            `).join("");
+            `}).join("");
         }
 
         fetchRooms();
