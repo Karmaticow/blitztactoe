@@ -157,9 +157,8 @@
         }
 
         .room-toggle.private {
-            background-color: #666;
+            background-color: #000;
             color: #fff;
-            color: #45b6fe;
         }
 
         .room-list {
@@ -554,9 +553,9 @@
             roomListEl.innerHTML = rooms.map(room => {
                 let displayText;
                 if (room.private) {
-                    displayText = '🔒 private';
+                    displayText = room.name ? `🔒 ${room.name}` : '🔒 private';
                 } else {
-                    displayText = room.name ? `"${room.name}"` : room.code;
+                    displayText = room.name ? `${room.name}` : room.code;
                 }
                 
                 return `
