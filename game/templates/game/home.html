@@ -10,16 +10,21 @@
         body {
             margin: 0;
             padding: 20px;
-            background: #000;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000000 0%, #0a0015 50%, #000000 100%);
+            background-attachment: fixed;
             color: #fff;
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            pointer-events: none;
         }
 
+        body.loaded {
+            pointer-events: auto;
+        }
         .bg-symbols {
-
             position: fixed;
             top: 0;
             left: 0;
@@ -28,7 +33,8 @@
             pointer-events: none;
             overflow: hidden;
             z-index: -1;
-
+            opacity: 0;
+            animation: fade-in 0.6s ease-in 2s forwards;
         }
 
         .bg-row {
@@ -37,14 +43,18 @@
             position: absolute;
             left: 0;
             width: 200%;
+            will-change: transform;
+            filter: blur(0.5px);
         }
 
         .bg-row span {
             font-size: 3rem;
             padding: 0 40px;
-            color: #222;
+            color: #1a1a2e;
             font-weight: bold;
             user-select: none;
+            text-shadow: 0 0 20px rgba(69, 182, 254, 0.15), 0 0 40px rgba(255, 100, 100, 0.1);
+            will-change: transform;
         }
 
         @keyframes scrollLeft {
@@ -65,24 +75,73 @@
         .bg-row.right {
             animation: scrollRight 30s linear infinite;
         }
-        
+
         .title {
             text-align: center;
             margin: 40px 0;
+            opacity: 0;
+            position: relative;
+            transform: translateY(calc(50vh - 100px));
+            animation: fade-in 0.3s ease-in 0.1s forwards, slide-up 1.2s ease-in-out 2s forwards;
         }
-        
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(calc(50vh - 100px));
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 9em; }
+        }
+
+        @keyframes caret-color {
+            0%, 33% { border-color: #ff9500; }
+            34%, 66% { border-color: #ff4444; }
+            67%, 100% { border-color: #45b6fe; }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: #45b6fe; }
+        }
+
         .title h1 {
             font-size: 3rem;
             margin: 0;
             font-weight: 200;
-            text-shadow: white 0 0 10px;
+            text-shadow: none;
             letter-spacing: 8px;
             text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            overflow: hidden;
+            border-right: 0.08em solid #ff9500;
+            white-space: nowrap;
+            animation: typing 2s ease-out forwards, caret-color 2s linear forwards, blink-caret 1s step-end infinite 2s;
         }
+
+        .title h1 .word {
+            display: inline;
+        }
+
+        .title h1 .blitz { color: #ff9500; }
+        .title h1 .tac { color: #ff4444; }
+        .title h1 .toe { color: #45b6fe; }
 
         .title p {
             color: #666;
-            text-shadow: #cccccc 0 0 20px;
+            opacity: 0;
+            animation: fade-in 0.6s ease-in 2.8s forwards;
         }
         
         .sections {
@@ -92,6 +151,8 @@
             flex-wrap: wrap;
             max-width: 1200px;
             margin: 0 auto;
+            opacity: 0;
+            animation: fade-in 0.6s ease-in 2.8s forwards;
         }
         
         .section {
@@ -177,11 +238,6 @@
             background: #111;
             gap: 10px;
         }
-        
-        .room-code {
-            font-family: monospace;
-            font-size: 1.2rem;
-        }
 
         .room-name {
             font-size: 1.1rem;
@@ -206,17 +262,6 @@
             font-family: monospace;
             font-size: 2rem;
             letter-spacing: 3px;
-        }
-
-        @keyframes pulse {
-            0%, 100% {opacity: 1;}
-            50% {opacity: 0.5;}
-        }
-
-        .created-room .code {
-            font-family: monospace;
-            font-size: 2rem;
-            letter-spacing: 3px;
             cursor: pointer;
             padding: 10px;
             border-radius: 4px;
@@ -231,6 +276,11 @@
 
         .created-room .code:active {
             transform: scale(0.95);
+        }
+
+        @keyframes pulse {
+            0%, 100% {opacity: 1;}
+            50% {opacity: 0.5;}
         }
 
         #waiting-text {
@@ -320,10 +370,11 @@
         }
 
     </style>
+</head>
 <body>
     <div class="bg-symbols" id="bg-symbols"></div>
     <div class="title">
-        <h1>BlitzTacToe</h1>
+        <h1><span class="word blitz">Blitz</span><span class="word tac">Tac</span><span class="word toe">Toe</span></h1>
         <p>it's like tictactoe, ok? difference is its like really fast, ok? so move fast ok? ok???</p>
     </div>
     
@@ -430,7 +481,6 @@
             currentRoomCode = generateRoomCode();
             roomCodeEl.textContent = currentRoomCode;
             
-            // Display room name if provided
             const nameDisplay = document.getElementById('room-name-display');
             if (roomName) {
                 nameDisplay.textContent = `"${roomName}"`;
@@ -439,7 +489,6 @@
                 nameDisplay.style.display = 'none';
             }
             
-            // Hide code for public lobbies, show for private
             const codeLabel = document.getElementById('code-label');
             if (isPrivate) {
                 roomCodeEl.style.display = 'block';
@@ -606,6 +655,10 @@
         container.appendChild(row);
 
     }
+
+    setTimeout(() => {
+        document.body.classList.add('loaded');
+    }, 3400);
 
     </script>
 
