@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <title>BlitzTacToe</title>
-    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB4Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZjk1MDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZmY0NDQ0Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiMwYTAwMTUiIC8+CiAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg4LDgpIj4KICAgIDxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjIwIiBmaWxsPSJ1cmwoI2cpIiBvcGFjaXR5PSIwLjk4IiAvPgogICAgPHRleHQgeD0iMjQiIHk9IjMwIiBmb250LWZhbWlseT0iQ291cmllciBOZXcsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIyMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzBhMDAxNSIgZm9udC13ZWlnaHQ9IjcwMCI+WDwvdGV4dD4KICA8L2c+Cjwvc3ZnPgo=" type="image/svg+xml">
-    <link rel="shortcut icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB4Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZjk1MDAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZmY0NDQ0Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiByeD0iMTIiIGZpbGw9IiMwYTAwMTUiIC8+CiAgICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg4LDgpIj4KICAgIDxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjIwIiBmaWxsPSJ1cmwoI2cpIiBvcGFjaXR5PSIwLjk4IiAvPgogICAgPHRleHQgeD0iMjQiIHk9IjMwIiBmb250LWZhbWlseT0iQ291cmllciBOZXcsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIyMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzBhMDAxNSIgZm9udC13ZWlnaHQ9IjcwMCI+WDwvdGV4dD4KICA8L2c+Cjwvc3ZnPgo=" />
+    <link rel="icon" href="/static/favicon.svg?v=2" type="image/svg+xml">
+    <link rel="shortcut icon" href="/static/favicon.svg?v=2">
+    <link rel="icon" href="/static/favicon.svg?v=2" type="image/svg+xml">
     <style>
         .hidden { display: none !important; }
         
@@ -527,6 +528,9 @@
                     goToGame(roomCode);
                 }
                 if (data.type === "game_start") {
+                    goToGame(roomCode);
+                }
+                if (data.type === "countdown_start") {
                     goToGame(roomCode);
                 }
             };

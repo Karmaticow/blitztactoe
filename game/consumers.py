@@ -7,6 +7,7 @@ import asyncio
 import time
 
 TURN_TIME = 5
+COUNTDOWN_SECONDS = 3
 GAMES = {}
 
 redis_client = None
@@ -33,6 +34,8 @@ async def save_game_to_redis(room_id, game):
             "private": game.get("private", False),
             "name": game.get("name", ""),
             "rematch_votes": list(game.get("rematch_votes", [])),
+            "countdown_started": game.get("countdown_started"),
+            "countdown_seconds": game.get("countdown_seconds", None),
         }
         client = get_redis_client()
         await client.set(f"game:{room_id}", json.dumps(to_store))
@@ -50,6 +53,8 @@ async def load_game_from_redis(room_id):
         stored.setdefault("channels", [])
         stored.setdefault("timer_task", None)
         stored.setdefault("turn_started", stored.get("turn_started"))
+        stored.setdefault("countdown_started", stored.get("countdown_started"))
+        stored.setdefault("countdown_seconds", stored.get("countdown_seconds", None))
         stored.setdefault("rematch_votes", stored.get("rematch_votes", []))
         return stored
     except Exception:
@@ -79,7 +84,6 @@ async def turn_timeout_task(room_id):
 
     game["timer_task"] = asyncio.create_task(turn_timeout_task(room_id))
 
-    # persist updated game state
     try:
         await save_game_to_redis(room_id, game)
     except Exception:
@@ -88,6 +92,50 @@ async def turn_timeout_task(room_id):
     message = {
         "type": "turn_timeout",
         "board": game["board"],
+        "turn": game["turn"],
+        "turn_started": game["turn_started"],
+        "turn_time": TURN_TIME,
+    }
+
+    channel_layer = get_channel_layer()
+    await channel_layer.group_send(f"room_{room_id}", message)
+
+
+async def countdown_task(room_id):
+    try:
+        await asyncio.sleep(COUNTDOWN_SECONDS)
+    except asyncio.CancelledError:
+        return
+
+    game = GAMES.get(room_id)
+    if not game:
+        return
+
+    if len(game.get("players", [])) < 2:
+        game["countdown_started"] = None
+        game["countdown_seconds"] = None
+        game["countdown_task"] = None
+        try:
+            await save_game_to_redis(room_id, game)
+        except Exception:
+            pass
+        return
+
+    game["game_started"] = True
+    game["countdown_started"] = None
+    game["countdown_seconds"] = None
+    game["countdown_task"] = None
+
+    game["turn_started"] = time.time()
+    game["timer_task"] = asyncio.create_task(turn_timeout_task(room_id))
+
+    try:
+        await save_game_to_redis(room_id, game)
+    except Exception:
+        pass
+
+    message = {
+        "type": "game_start",
         "turn": game["turn"],
         "turn_started": game["turn_started"],
         "turn_time": TURN_TIME,
@@ -152,17 +200,27 @@ class GameConsumer(AsyncWebsocketConsumer):
             "turn_time": TURN_TIME,
             "game_started": game["game_started"],
             "turn_started": game["turn_started"],
+            "countdown_started": game.get("countdown_started"),
+            "countdown_seconds": game.get("countdown_seconds"),
         }))
 
         if len(game["players"]) == 2 and not game["game_started"]:
-            game["game_started"] = True
-            await self._start_new_turn(game)
+            if game.get("countdown_task"):
+                try:
+                    game["countdown_task"].cancel()
+                except Exception:
+                    pass
+
+            game["countdown_started"] = time.time()
+            game["countdown_seconds"] = COUNTDOWN_SECONDS
+            game["countdown_task"] = asyncio.create_task(countdown_task(self.room_id))
+
+            await save_game_to_redis(self.room_id, game)
 
             await self._broadcast({
-                "type": "game_start",
-                "turn": game["turn"],
-                "turn_started": game["turn_started"],
-                "turn_time": TURN_TIME,
+                "type": "countdown_start",
+                "countdown_started": game["countdown_started"],
+                "countdown_seconds": game["countdown_seconds"],
             })
 
     async def disconnect(self, close_code):
@@ -185,7 +243,15 @@ class GameConsumer(AsyncWebsocketConsumer):
                     except Exception:
                         pass
                     game["timer_task"] = None
-                game["game_started"] = False
+                    game["game_started"] = False
+                    if game.get("countdown_task"):
+                        try:
+                            game["countdown_task"].cancel()
+                        except Exception:
+                            pass
+                        game["countdown_task"] = None
+                    game["countdown_started"] = None
+                    game["countdown_seconds"] = None
 
                 if was_game_active and len(game["players"]) == 1:
                     remaining = game["players"][0]
@@ -224,29 +290,48 @@ class GameConsumer(AsyncWebsocketConsumer):
             votes_needed = 2
 
             if len(game["rematch_votes"]) >= votes_needed:
-                game["board"] = [""] * 9
-                game["turn"] = "O" if game.get("last_starter") == "X" else "X"
-                game["last_starter"] = game["turn"]
-                game["winner"] = None
-                game["rematch_votes"] = []
+                    game["board"] = [""] * 9
+                    game["turn"] = "O" if game.get("last_starter") == "X" else "X"
+                    game["last_starter"] = game["turn"]
+                    game["winner"] = None
+                    game["rematch_votes"] = []
 
-                if game.get("timer_task"):
-                    try:
-                        game["timer_task"].cancel()
-                    except Exception:
-                        pass
+                    if game.get("timer_task"):
+                        try:
+                            game["timer_task"].cancel()
+                        except Exception:
+                            pass
+                        game["timer_task"] = None
 
-                await self._start_new_turn(game)
+                    if game.get("countdown_task"):
+                        try:
+                            game["countdown_task"].cancel()
+                        except Exception:
+                            pass
+                        game["countdown_task"] = None
 
-                await save_game_to_redis(self.room_id, game)
+                    game["turn_started"] = None
+                    game["countdown_started"] = time.time()
+                    game["countdown_seconds"] = COUNTDOWN_SECONDS
+                    game["countdown_task"] = asyncio.create_task(countdown_task(self.room_id))
 
-                await self._broadcast({
-                    "type": "game_reset",
-                    "board": game["board"],
-                    "turn": game["turn"],
-                    "turn_started": game["turn_started"],
-                    "turn_time": TURN_TIME,
-                })
+                    await save_game_to_redis(self.room_id, game)
+
+                    await self._broadcast({
+                        "type": "game_reset",
+                        "board": game["board"],
+                        "turn": game["turn"],
+                        "turn_started": game.get("turn_started"),
+                        "turn_time": TURN_TIME,
+                        "countdown_started": game["countdown_started"],
+                        "countdown_seconds": game["countdown_seconds"],
+                    })
+                    
+                    await self._broadcast({
+                        "type": "countdown_start",
+                        "countdown_started": game["countdown_started"],
+                        "countdown_seconds": game["countdown_seconds"],
+                    })
             else:
                 await save_game_to_redis(self.room_id, game)
                 await self._broadcast({
@@ -308,7 +393,16 @@ class GameConsumer(AsyncWebsocketConsumer):
             game["last_starter"] = game["turn"]
             game["winner"] = None
             game["rematch_votes"] = []
-            await self._start_new_turn(game)
+
+            if game.get("countdown_task"):
+                try:
+                    game["countdown_task"].cancel()
+                except Exception:
+                    pass
+
+            game["countdown_started"] = time.time()
+            game["countdown_seconds"] = COUNTDOWN_SECONDS
+            game["countdown_task"] = asyncio.create_task(countdown_task(self.room_id))
 
             await save_game_to_redis(self.room_id, game)
 
@@ -316,8 +410,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                 "type": "game_reset",
                 "board": game["board"],
                 "turn": game["turn"],
-                "turn_started": game["turn_started"],
+                "turn_started": game.get("turn_started"),
                 "turn_time": TURN_TIME,
+                "countdown_started": game["countdown_started"],
+                "countdown_seconds": game["countdown_seconds"],
+            })
+
+            await self._broadcast({
+                "type": "countdown_start",
+                "countdown_started": game["countdown_started"],
+                "countdown_seconds": game["countdown_seconds"],
             })
 
         else:
@@ -384,4 +486,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event))
 
     async def player_left(self, event):
+        await self.send(text_data=json.dumps(event))
+
+    async def countdown_start(self, event):
         await self.send(text_data=json.dumps(event))
