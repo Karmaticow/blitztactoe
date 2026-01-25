@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <title>BlitzTacToe</title>
     <style>
         .hidden { display: none !important; }
@@ -10,6 +11,9 @@
         body {
             margin: 0;
             padding: 20px;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             min-height: 100vh;
             background: linear-gradient(135deg, #000000 0%, #0a0015 50%, #000000 100%);
             background-attachment: fixed;
@@ -34,7 +38,6 @@
             overflow: hidden;
             z-index: -1;
             opacity: 0;
-            animation: fade-in 0.6s ease-in 2s forwards;
         }
 
         .bg-row {
@@ -79,10 +82,13 @@
         .title {
             text-align: center;
             margin: 40px 0;
-            opacity: 0;
+            opacity: 1;
             position: relative;
             transform: translateY(calc(50vh - 100px));
-            animation: fade-in 0.3s ease-in 0.1s forwards, slide-up 1.2s ease-in-out 2s forwards;
+        }
+
+        .title.typed-done {
+            animation: slide-up 1.2s ease-in-out forwards;
         }
 
         @keyframes slide-up {
@@ -125,7 +131,7 @@
             font-family: 'Courier New', monospace;
             display: inline-block;
             overflow: hidden;
-            border-right: 0.08em solid #ff9500;
+            border-right: 0.08em solid var(--electric-white);
             white-space: nowrap;
             animation: typing 2s ease-out forwards, caret-color 2s linear forwards, blink-caret 1s step-end infinite 2s;
         }
@@ -135,187 +141,153 @@
         }
 
         .title h1 .blitz { color: #ff9500; }
-        .title h1 .tac { color: #ff4444; }
-        .title h1 .toe { color: #45b6fe; }
+        .title h1 .tac { color: var(--electric-red); }
+        .title h1 .toe { color: var(--electric-blue); }
 
         .title p {
             color: #666;
             opacity: 0;
-            animation: fade-in 0.6s ease-in 2.8s forwards;
         }
         
+        :root{
+            --electric-red: #ff4444;
+            --electric-blue: #45b6fe;
+            --electric-white: #ffffff;
+            --glass-bg: rgba(10,10,15,0.5);
+            --panel-border: rgba(69,182,254,0.06);
+        }
+
         .sections {
             display: flex;
             justify-content: center;
-            gap: 40px;
+            gap: 28px;
             flex-wrap: wrap;
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
-            opacity: 0;
-            animation: fade-in 0.6s ease-in 2.8s forwards;
-        }
-        
-        .section {
-            border: 1px solid #333;
             padding: 20px;
+            opacity: 0;
+        }
+
+        .section{
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            border: 1px solid var(--panel-border);
+            padding: 22px;
             min-width: 300px;
-            background: #0a0a0a;
+            width: 360px;
+            box-shadow: 0 6px 30px rgba(69,182,254,0.06), 0 0 24px rgba(255,68,68,0.03) inset;
+            border-radius: 12px;
+            backdrop-filter: blur(6px) saturate(120%);
+            transition: transform 220ms ease, box-shadow 220ms ease;
         }
-        
-        .section h2 {
-            margin-top: 0;
-        }
-        
-        button {
-            padding: 10px 20px;
-            font-size: 1rem;
+
+        .section:hover{ box-shadow: 0 8px 24px rgba(69,182,254,0.06); }
+
+        .section h2{ margin-top:0; font-weight:600; color: #ff9500; letter-spacing:1px; }
+
+        button{
+            padding: 10px 18px;
+            font-size: 0.95rem;
             cursor: pointer;
-            background: #fff;
-            color: #000;
-            border: none;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            transition: all 0.2s;
+            transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
         }
 
-        button:hover {
-            background: #ccc;
+        button:hover{ background: rgba(255,255,255,0.03); border-color: rgba(69,182,254,0.14); }
+        button:active{ transform: translateY(1px); }
+        button:disabled{ opacity:0.5; cursor:not-allowed; }
+
+        .room-toggle{
+            display:inline-block; padding:8px 16px; border-radius:8px; cursor:pointer;
+            background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+            color:var(--electric-blue); border:1px solid rgba(69,182,254,0.12); font-weight:600;
         }
 
-        button:active {
-            transform: scale(0.95);
+        .room-toggle.private{ background: linear-gradient(90deg, rgba(0,0,0,0.6), rgba(10,10,20,0.6)); color:var(--electric-red); }
+
+        .room-list{ list-style:none; padding:0; margin:10px 0; }
+
+        .room-item{
+            display:flex; align-items:center; justify-content:space-between; gap:12px;
+            padding:10px; margin:8px 0; border-radius:8px; background: linear-gradient(180deg, rgba(15,15,30,0.6), rgba(10,10,20,0.4));
+            border:1px solid rgba(69,182,254,0.04);
         }
 
-        button:disabled {
-            background: #333;
-            color: #666;
-            cursor: not-allowed;
-        }
+        .room-name{ font-size:1rem; font-weight:600; color:#eaf6ff; }
 
-        .room-toggle {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #fff;
-            color: #000;
-            border: 1px solid #333;
-            cursor: pointer;
-            border-radius: 5px;
-            margin: 5px;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 500;
-        }
+        .no-rooms{ color:#9aa8b3; font-style:italic; }
 
-        .room-toggle:hover {
-            background-color: #e0e0e0;
-            transform: translateY(-2px);
-        }
+        .created-room{ margin-top:10px; padding:12px; border-radius:8px; background: linear-gradient(90deg, rgba(69,182,254,0.02), rgba(255,68,68,0.02)); border:1px solid rgba(69,182,254,0.04); }
 
-        .room-toggle:active {
-            transform: scale(0.95);
-        }
+        .created-room .code{ font-family:monospace; font-size:1.6rem; letter-spacing:4px; cursor:pointer; padding:8px 12px; border-radius:6px; color:var(--electric-blue); background: rgba(10,10,20,0.6); box-shadow: 0 6px 18px rgba(69,182,254,0.06); }
 
-        .room-toggle.private {
-            background-color: #000;
-            color: #fff;
-        }
-
-        .room-list {
-            list-style: none;
-            padding: 0;
-            margin: 10px 0;
-        }
-        
-        .room-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border: 1px solid #333;
-            margin: 5px 0;
-            background: #111;
-            gap: 10px;
-        }
-
-        .room-name {
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: #fff;
-            flex-grow: 1;
-        }
-        
-        .no-rooms {
-            color: #888;
-            font-style: italic;
-        }
-        
-        .created-room {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #333;
-            background: #111;
-        }
-        
-        .created-room .code {
-            font-family: monospace;
-            font-size: 2rem;
-            letter-spacing: 3px;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 4px;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .created-room .code:hover {
-            background-color: #222;
-            color: #45b6fe;
-        }
-
-        .created-room .code:active {
-            transform: scale(0.95);
-        }
+        .created-room .code:hover{ transform:translateY(-3px); color:var(--electric-red); box-shadow: 0 10px 30px rgba(69,182,254,0.12); }
 
         @keyframes pulse {
             0%, 100% {opacity: 1;}
             50% {opacity: 0.5;}
         }
 
+            .show-ui .bg-symbols { animation: fade-in 0.6s ease-in 0.1s forwards; }
+            .show-ui .title p { animation: fade-in 0.6s ease-in 0.2s forwards; }
+            .show-ui .sections { animation: fade-in 0.6s ease-in 0.35s forwards; }
         #waiting-text {
             animation: pulse 2s infinite;
         }
 
+        .themed-input,
         #code-input {
-            padding: 10px 15px;
-            font-size: 1rem;
-            font-family: monospace;
-            text-transform: uppercase;
-            background-color: #fff;
-            color: #000;
-            border: 1px solid #333;
-            letter-spacing: 2px;
-            transition: all 0.2s;
-            cursor: text;
-            user-select: text;
-            -webkit-user-select: text;
-        }
-
-        #code-input:hover {
-            background-color: #f5f5f5;
-        }
-
-        #code-input:focus {
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            background: rgba(255,255,255,0.02);
+            color: #eaf6ff;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+            backdrop-filter: blur(6px);
             outline: none;
-            background-color: #fff;
-            border-color: #45b6fe;
-            box-shadow: 0 0 10px rgba(69, 182, 254, 0.3);
+            letter-spacing: 0.2px;
         }
 
-        #code-input::placeholder {
-            color: #999;
+        #code-input { font-family: monospace; text-transform: uppercase; letter-spacing: 2px; }
+
+        .themed-input:focus,
+        #code-input:focus {
+            border-color: var(--electric-blue);
+            box-shadow: 0 8px 28px rgba(69,182,254,0.08), 0 0 24px rgba(69,182,254,0.03) inset;
+            background: rgba(10,10,20,0.6);
+            color: #ffffff;
         }
+
+        #code-input::placeholder { color: rgba(255,255,255,0.45); }
+
+        .code-row {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .code-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .code-controls #code-input {
+            flex: 0 0 160px;
+            width: auto;
+        }
+
+        .code-label { color: #9aa8b3; font-size: 0.95rem; }
 
         .notification {
             position: fixed;
@@ -385,7 +357,7 @@
             <button id="create-btn">create room</button>
 
             <div style="margin-top: 20px;">
-                <input type="text" id="room-name-input" placeholder="room name (optional)" maxlength="20" style="padding: 10px 14px; font-size: 0.95rem; background-color: #fff; color: #000; border: 1px solid #555; border-radius: 4px; width: 100%; box-sizing: border-box; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); user-select: text; -webkit-user-select: text;" onFocus="this.style.borderColor='#45b6fe'; this.style.boxShadow='0 0 8px rgba(69, 182, 254, 0.3)';" onBlur="this.style.borderColor='#555'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.2)';">
+                <input type="text" id="room-name-input" class="themed-input" placeholder="room name (optional)" maxlength="20">
             </div>
 
             <div style="margin-top: 20px;">
@@ -409,10 +381,12 @@
             </ul>
             <button id="refresh-btn">refresh</button>
 
-            <div style = "margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">
-                <p>or enter a code: </p>
-                <input type="text" id="code-input" maxlength="6" placeholder="code">
-                <button id = "join-code-btn">join room</button>
+            <div class="code-row">
+                <div class="code-label">or enter a code:</div>
+                <div class="code-controls">
+                    <input type="text" id="code-input" maxlength="6" placeholder="code">
+                    <button id="join-code-btn">join room</button>
+                </div>
             </div>
         </div>
     </div>
@@ -656,9 +630,40 @@
 
     }
 
-    setTimeout(() => {
+    const titleEl = document.querySelector('.title h1');
+
+    function revealUIAfterSlide() {
         document.body.classList.add('loaded');
-    }, 3400);
+        document.body.classList.add('show-ui');
+    }
+
+    function handleTypingFinished() {
+        const titleContainer = document.querySelector('.title');
+        if (titleContainer) {
+            titleContainer.classList.add('typed-done');
+                setTimeout(revealUIAfterSlide, 250);
+        } else {
+            revealUIAfterSlide();
+        }
+    }
+
+    if (titleEl) {
+        titleEl.addEventListener('animationend', (e) => {
+            if (e.animationName === 'typing') {
+                handleTypingFinished();
+            }
+        });
+
+        if (typeof titleEl.getAnimations === 'function') {
+            const animations = titleEl.getAnimations();
+            const typingRunning = animations.some(a => a.animationName === 'typing' && a.playState === 'running');
+            if (!typingRunning) setTimeout(handleTypingFinished, 0);
+        } else {
+            setTimeout(handleTypingFinished, 2100);
+        }
+    } else {
+        revealUIAfterSlide();
+    }
 
     </script>
 

@@ -1,11 +1,67 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
+from django.conf import settings
+import redis.asyncio as aioredis
 import json
 import asyncio
 import time
 
 TURN_TIME = 5
 GAMES = {}
+
+redis_client = None
+
+
+def get_redis_client():
+    global redis_client
+    if redis_client is None:
+        redis_url = getattr(settings, 'REDIS_URL', 'redis://127.0.0.1:6379/0')
+        redis_client = aioredis.from_url(redis_url, decode_responses=True)
+    return redis_client
+
+
+async def save_game_to_redis(room_id, game):
+    try:
+        to_store = {
+            "players": game.get("players", []),
+            "board": game.get("board", [""] * 9),
+            "turn": game.get("turn", "X"),
+            "winner": game.get("winner"),
+            "turn_started": game.get("turn_started"),
+            "game_started": game.get("game_started", False),
+            "last_starter": game.get("last_starter", "X"),
+            "private": game.get("private", False),
+            "name": game.get("name", ""),
+            "rematch_votes": list(game.get("rematch_votes", [])),
+        }
+        client = get_redis_client()
+        await client.set(f"game:{room_id}", json.dumps(to_store))
+    except Exception:
+        pass
+
+
+async def load_game_from_redis(room_id):
+    try:
+        client = get_redis_client()
+        data = await client.get(f"game:{room_id}")
+        if not data:
+            return None
+        stored = json.loads(data)
+        stored.setdefault("channels", [])
+        stored.setdefault("timer_task", None)
+        stored.setdefault("turn_started", stored.get("turn_started"))
+        stored.setdefault("rematch_votes", stored.get("rematch_votes", []))
+        return stored
+    except Exception:
+        return None
+
+
+async def delete_game_from_redis(room_id):
+    try:
+        client = get_redis_client()
+        await client.delete(f"game:{room_id}")
+    except Exception:
+        pass
 
 
 async def turn_timeout_task(room_id):
@@ -22,6 +78,12 @@ async def turn_timeout_task(room_id):
     game["turn_started"] = time.time()
 
     game["timer_task"] = asyncio.create_task(turn_timeout_task(room_id))
+
+    # persist updated game state
+    try:
+        await save_game_to_redis(room_id, game)
+    except Exception:
+        pass
 
     message = {
         "type": "turn_timeout",
@@ -46,20 +108,27 @@ class GameConsumer(AsyncWebsocketConsumer):
         is_private = params.get('private', ['false'])[0] == 'true'
         room_name = params.get('name', [''])[0] or ''
 
+        
         if self.room_id not in GAMES:
-            GAMES[self.room_id] = {
-                "players": [],
-                "board": [""] * 9,
-                "turn": "X",
-                "winner": None,
-                "timer_task": None,
-                "turn_started": None,
-                "game_started": False,
-                "channels": [],
-                "last_starter": "X",
-                "private" : is_private,
-                "name": room_name,
-            }
+            loaded = await load_game_from_redis(self.room_id)
+            if loaded:
+                GAMES[self.room_id] = loaded
+            else:
+                GAMES[self.room_id] = {
+                    "players": [],
+                    "board": [""] * 9,
+                    "turn": "X",
+                    "winner": None,
+                    "timer_task": None,
+                    "turn_started": None,
+                    "game_started": False,
+                    "channels": [],
+                    "last_starter": "X",
+                    "private" : is_private,
+                    "name": room_name,
+                    "rematch_votes": [],
+                }
+                await save_game_to_redis(self.room_id, GAMES[self.room_id])
 
         game = GAMES[self.room_id]
 
@@ -69,7 +138,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         self.symbol = "X" if "X" not in game["players"] else "O"
         game["players"].append(self.symbol)
-        game["channels"].append(self.channel_name)
+        game.setdefault("channels", []).append(self.channel_name)
+        await save_game_to_redis(self.room_id, game)
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -86,7 +156,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         if len(game["players"]) == 2 and not game["game_started"]:
             game["game_started"] = True
-            self._start_new_turn(game)
+            await self._start_new_turn(game)
 
             await self._broadcast({
                 "type": "game_start",
@@ -110,7 +180,10 @@ class GameConsumer(AsyncWebsocketConsumer):
             
             if len(game["players"]) < 2:
                 if game.get("timer_task"):
-                    game["timer_task"].cancel()
+                    try:
+                        game["timer_task"].cancel()
+                    except Exception:
+                        pass
                     game["timer_task"] = None
                 game["game_started"] = False
 
@@ -130,8 +203,12 @@ class GameConsumer(AsyncWebsocketConsumer):
                         "symbol": leaving_symbol or '?',
                     })
 
-            if(len(game["players"]) == 0):
-                del GAMES[self.room_id]
+            if len(game.get("players", [])) > 0:
+                await save_game_to_redis(self.room_id, game)
+            else:
+                await delete_game_from_redis(self.room_id)
+                if len(game.get("players", [])) == 0:
+                    del GAMES[self.room_id]
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
@@ -141,7 +218,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
 
         if data.get("action") == "rematch":
-            game.setdefault("rematch_votes", set()).add(self.symbol)
+            game.setdefault("rematch_votes", [])
+            if self.symbol not in game["rematch_votes"]:
+                game["rematch_votes"].append(self.symbol)
             votes_needed = 2
 
             if len(game["rematch_votes"]) >= votes_needed:
@@ -149,12 +228,17 @@ class GameConsumer(AsyncWebsocketConsumer):
                 game["turn"] = "O" if game.get("last_starter") == "X" else "X"
                 game["last_starter"] = game["turn"]
                 game["winner"] = None
-                game["rematch_votes"] = set()
+                game["rematch_votes"] = []
 
                 if game.get("timer_task"):
-                    game["timer_task"].cancel()
+                    try:
+                        game["timer_task"].cancel()
+                    except Exception:
+                        pass
 
-                self._start_new_turn(game)
+                await self._start_new_turn(game)
+
+                await save_game_to_redis(self.room_id, game)
 
                 await self._broadcast({
                     "type": "game_reset",
@@ -164,6 +248,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     "turn_time": TURN_TIME,
                 })
             else:
+                await save_game_to_redis(self.room_id, game)
                 await self._broadcast({
                     "type": "rematch_requested",
                     "symbol": self.symbol
@@ -192,6 +277,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             if game.get("timer_task"):
                 game["timer_task"].cancel()
                 game["timer_task"] = None
+            await save_game_to_redis(self.room_id, game)
 
             await self._broadcast({
                 "type": "game_over",
@@ -203,6 +289,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             if game.get("timer_task"):
                 game["timer_task"].cancel()
                 game["timer_task"] = None
+            await save_game_to_redis(self.room_id, game)
 
             await self._broadcast({
                 "type": "game_over",
@@ -220,8 +307,10 @@ class GameConsumer(AsyncWebsocketConsumer):
             game["turn"] = "O" if game.get("last_starter") == "X" else "X"
             game["last_starter"] = game["turn"]
             game["winner"] = None
-            game["rematch_votes"] = set()
-            self._start_new_turn(game)
+            game["rematch_votes"] = []
+            await self._start_new_turn(game)
+
+            await save_game_to_redis(self.room_id, game)
 
             await self._broadcast({
                 "type": "game_reset",
@@ -233,7 +322,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         else:
             game["turn"] = "O" if game["turn"] == "X" else "X"
-            self._start_new_turn(game)
+            await self._start_new_turn(game)
+
+            await save_game_to_redis(self.room_id, game)
 
             await self._broadcast({
                 "type": "turn_change",
@@ -244,21 +335,24 @@ class GameConsumer(AsyncWebsocketConsumer):
             })
 
     async def _broadcast(self, message):
-        game = GAMES.get(self.room_id)
-        if not game:
-            return
-        for channel_name in game.get("channels", []):
+        try:
+            await self.channel_layer.group_send(self.room_group_name, message)
+        except Exception:
+            pass
+
+    async def _start_new_turn(self, game):
+        if game.get("timer_task"):
             try:
-                await self.channel_layer.send(channel_name, message)
+                game["timer_task"].cancel()
             except Exception:
                 pass
 
-    def _start_new_turn(self, game):
-        if game.get("timer_task"):
-            game["timer_task"].cancel()
-
         game["turn_started"] = time.time()
         game["timer_task"] = asyncio.create_task(turn_timeout_task(self.room_id))
+        try:
+            await save_game_to_redis(self.room_id, game)
+        except Exception:
+            pass
 
     def check_winner(self, board):
         wins = [
