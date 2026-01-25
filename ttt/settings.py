@@ -118,5 +118,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+# URL path used to serve static files. Ensure it starts and ends with '/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Include the project-level `static/` directory so files like /static/favicon.svg
+# are served in development without needing collectstatic.
+STATICFILES_DIRS = [BASE_DIR / 'static']
